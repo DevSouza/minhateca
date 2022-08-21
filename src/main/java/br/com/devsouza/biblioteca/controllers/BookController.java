@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import javax.validation.Valid;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,7 @@ public class BookController {
 	private final BookRepository bookRepository;
 	private final AuthorRepository authorRepository;
 	private final GenreRepository genreRepository;
+	private final ModelMapper mapper;
 
 	@GetMapping
 	public ResponseEntity<?> getAllBooks() {
@@ -83,7 +85,7 @@ public class BookController {
 	}
 	
 	@PutMapping("/{bookId}")
-	public ResponseEntity<?> updateBookById(@PathVariable UUID bookId, @RequestBody @Valid BookDto bookDto) {
+	public ResponseEntity<?> updateBookById(@PathVariable UUID bookId, @RequestBody BookDto bookDto) {
 		log.debug("Update Book: {}", bookDto.getName());
 		
 		Optional<BookEntity> bookOptional = bookRepository.findById(bookId);
@@ -91,14 +93,15 @@ public class BookController {
 			return ResponseEntity.notFound().build();
 		
 		var book = bookOptional.get();
-		BeanUtils.copyProperties(bookDto, book, "bookId");
+		mapper.map(bookDto, book);
+		book.setBookId(bookId);
 		
-		for(AuthorEntity author : bookDto.getAuthors()) {
+		for(AuthorEntity author : book.getAuthors()) {
 			if(!authorExists(author)) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Autor com id: " + author.getAuthorId() + " não existe");					
 			book.getAuthors().add(author);
 		}
 		
-		for(GenreEntity genre : bookDto.getGenres()) {
+		for(GenreEntity genre : book.getGenres()) {
 			if(!genreExists(genre)) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Genero com id: " + genre.getGenreId() + " não existe");
 			book.getGenres().add(genre);
 		}
