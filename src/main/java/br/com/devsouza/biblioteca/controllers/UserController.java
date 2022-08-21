@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.devsouza.biblioteca.dtos.UserDto;
 import br.com.devsouza.biblioteca.entities.UserEntity;
+import br.com.devsouza.biblioteca.repositories.UserBookRepository;
 import br.com.devsouza.biblioteca.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -32,16 +33,8 @@ public class UserController {
 	private final ModelMapper mapper;
 	
 	private final UserRepository userRepository;
-	
-	//OK 1. Cadastrar Usuario	
-	//OK 2. Atualizar cadastro do usuario
-	//OK 3. Buscar por id
-	
-	// 4. Vincular livro
-	// 5. Desvincular livro
-	// 6. Listar livros do usuario
-	
-	
+	private final UserBookRepository userBookRepository;
+
 	@GetMapping("/{userId}")
 	public ResponseEntity<?> getUserById(@PathVariable UUID userId) {
 		log.debug("Get User by id: {}", userId);
@@ -85,4 +78,19 @@ public class UserController {
 		
 		return ResponseEntity.ok(userRepository.save(user));
 	}
+
+	// Listar livros do usuario
+	@GetMapping("/{userId}/books")
+	public ResponseEntity<?> getAllBooksByUser(@PathVariable UUID userId) {
+		log.debug("Get Books by User: {}", userId);
+		
+		Optional<UserEntity> userOptional = userRepository.findById(userId);
+		if(!userOptional.isPresent()) 
+			return ResponseEntity.notFound().build();
+		
+		return ResponseEntity.ok(userBookRepository.findByUser(userOptional.get()));
+	}
+	
+	// Vincular livro
+	// Desvincular livro
 }
