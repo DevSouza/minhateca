@@ -17,6 +17,7 @@ import javax.persistence.Table;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import br.com.devsouza.biblioteca.enums.Status;
 import br.com.devsouza.biblioteca.enuns.Type;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,7 +39,12 @@ public class UserBookEntity {
 	
 	@Column(nullable = false)
 	@Enumerated(EnumType.STRING)
-	private Type typeBook;
+	private Type type;
+	
+	@Builder.Default
+	@Column(nullable = false)
+	@Enumerated(EnumType.STRING)
+	private Status status = Status.NOT_STARTED;
 	
 	@JoinColumn(name = "user_id")
 	@ManyToOne(optional = false, fetch = FetchType.LAZY)

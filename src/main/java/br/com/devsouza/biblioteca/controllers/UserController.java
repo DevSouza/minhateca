@@ -1,7 +1,9 @@
 package br.com.devsouza.biblioteca.controllers;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
@@ -17,8 +19,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.devsouza.biblioteca.domain.UserBookDomain;
+import br.com.devsouza.biblioteca.dtos.UserBookDto;
 import br.com.devsouza.biblioteca.dtos.UserDto;
+import br.com.devsouza.biblioteca.entities.BookEntity;
+import br.com.devsouza.biblioteca.entities.UserBookEntity;
 import br.com.devsouza.biblioteca.entities.UserEntity;
+import br.com.devsouza.biblioteca.repositories.BookRepository;
 import br.com.devsouza.biblioteca.repositories.UserBookRepository;
 import br.com.devsouza.biblioteca.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +40,7 @@ public class UserController {
 	private final ModelMapper mapper;
 	
 	private final UserRepository userRepository;
+	private final BookRepository bookRepository;
 	private final UserBookRepository userBookRepository;
 
 	@GetMapping("/{userId}")
@@ -79,7 +87,6 @@ public class UserController {
 		return ResponseEntity.ok(userRepository.save(user));
 	}
 
-	// Listar livros do usuario
 	@GetMapping("/{userId}/books")
 	public ResponseEntity<?> getAllBooksByUser(@PathVariable UUID userId) {
 		log.debug("Get Books by User: {}", userId);
@@ -88,9 +95,40 @@ public class UserController {
 		if(!userOptional.isPresent()) 
 			return ResponseEntity.notFound().build();
 		
-		return ResponseEntity.ok(userBookRepository.findByUser(userOptional.get()));
+		List<UserBookEntity> lista = userBookRepository.findByUser(userOptional.get());
+		
+		log.info("Antes do mapper");
+		
+		return ResponseEntity.ok(userBookEntityToUserBookDomain(lista));
+	}
+
+	private List<UserBookDomain> userBookEntityToUserBookDomain(List<UserBookEntity> userBooks) {
+		return userBooks.stream().map(item -> {
+			UserBookDomain userBook = new UserBookDomain();
+			mapper.map(item, userBook);
+			return userBook;
+		}).collect(Collectors.toList());
 	}
 	
-	// Vincular livro
+	@PostMapping("/{userId}/books")
+	public ResponseEntity<?> attachBookToUser(@PathVariable UUID userId, @RequestBody @Valid UserBookDto userBookDto) {
+		log.debug("Attach Book {} to User {}", userBookDto.getBookId(), userId);
+		
+		Optional<UserEntity> userOptional = userRepository.findById(userId);
+		if(!userOptional.isPresent()) 
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario não existe");
+		
+		Optional<BookEntity> bookOptional = bookRepository.findById(userBookDto.getBookId());
+		if(!bookOptional.isPresent()) 
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Livro não existe");
+		
+		var userBook = new UserBookEntity();
+		mapper.map(userBookDto, userBook);
+		userBook.setUser(userOptional.get());
+		userBook.setBook(bookOptional.get());
+		
+		return ResponseEntity.status(HttpStatus.CREATED).body(userBookRepository.save(userBook));
+	}
+	
 	// Desvincular livro
 }
